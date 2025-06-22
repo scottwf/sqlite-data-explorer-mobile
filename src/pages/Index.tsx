@@ -166,6 +166,7 @@ const Index = () => {
                   database={database}
                   tableName={selectedTable}
                   tableInfo={databaseInfo?.tables.find(t => t.name === selectedTable)}
+                  allTables={databaseInfo?.tables || []}
                 />
               )}
             </Card>

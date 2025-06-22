@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,8 +12,13 @@ import {
   ArrowDown,
   Table as TableIcon,
   Key,
-  Hash
+  Hash,
+  Maximize,
+  Minimize,
+  Code
 } from 'lucide-react';
+import { QueryEditor } from './QueryEditor';
+import { CrudOperations, RowActions } from './CrudOperations';
 
 interface Column {
   name: string;
@@ -33,6 +37,7 @@ interface DataViewerProps {
   database: any;
   tableName: string;
   tableInfo?: TableInfo;
+  allTables?: TableInfo[];
 }
 
 interface SortConfig {
@@ -43,7 +48,8 @@ interface SortConfig {
 export const DataViewer: React.FC<DataViewerProps> = ({
   database,
   tableName,
-  tableInfo
+  tableInfo,
+  allTables = []
 }) => {
   const [data, setData] = useState<any[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
@@ -52,6 +58,9 @@ export const DataViewer: React.FC<DataViewerProps> = ({
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [pageSize] = useState(50);
   const [totalRows, setTotalRows] = useState(0);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [showQueryEditor, setShowQueryEditor] = useState(false);
+  const [isQueryMode, setIsQueryMode] = useState(false);
 
   useEffect(() => {
     if (!database || !tableName) return;
@@ -59,6 +68,7 @@ export const DataViewer: React.FC<DataViewerProps> = ({
     setCurrentPage(1);
     setSearchTerm('');
     setSortConfig(null);
+    setIsQueryMode(false);
     loadData();
   }, [database, tableName]);
 
@@ -67,7 +77,7 @@ export const DataViewer: React.FC<DataViewerProps> = ({
   }, [searchTerm, currentPage, sortConfig]);
 
   const loadData = () => {
-    if (!database || !tableName) return;
+    if (!database || !tableName || isQueryMode) return;
 
     try {
       // Build query with search, sort, and pagination
@@ -118,6 +128,21 @@ export const DataViewer: React.FC<DataViewerProps> = ({
     }
   };
 
+  const handleQueryResult = (result: any[]) => {
+    setData(result);
+    setIsQueryMode(true);
+    setTotalRows(result.length);
+    setCurrentPage(1);
+  };
+
+  const handleQueryColumns = (queryColumns: string[]) => {
+    setColumns(queryColumns);
+  };
+
+  const handleDataChange = () => {
+    loadData();
+  };
+
   const handleSort = (column: string) => {
     setSortConfig(current => {
       if (current?.column === column) {
@@ -139,8 +164,6 @@ export const DataViewer: React.FC<DataViewerProps> = ({
       : <ArrowDown className="h-4 w-4 text-blue-600" />;
   };
 
-  const totalPages = Math.ceil(totalRows / pageSize);
-
   const getColumnIcon = (columnName: string) => {
     const column = tableInfo?.columns.find(col => col.name === columnName);
     if (column?.pk) {
@@ -157,19 +180,45 @@ export const DataViewer: React.FC<DataViewerProps> = ({
     return String(value);
   };
 
+  const totalPages = Math.ceil(totalRows / pageSize);
+
+  const containerClasses = isFullScreen 
+    ? "fixed inset-0 z-50 bg-white p-6 overflow-auto"
+    : "p-6";
+
   return (
-    <div className="p-6">
+    <div className={containerClasses}>
       <CardHeader className="px-0 pt-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <CardTitle className="flex items-center gap-2 text-xl">
             <TableIcon className="h-6 w-6 text-blue-600" />
-            {tableName}
+            {isQueryMode ? 'Query Results' : tableName}
             <Badge variant="secondary" className="ml-2">
               {totalRows} rows
             </Badge>
           </CardTitle>
           
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowQueryEditor(!showQueryEditor)}
+            >
+              <Code className="h-4 w-4 mr-2" />
+              {showQueryEditor ? 'Hide' : 'Show'} Query Editor
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsFullScreen(!isFullScreen)}
+            >
+              {isFullScreen ? (
+                <Minimize className="h-4 w-4 mr-2" />
+              ) : (
+                <Maximize className="h-4 w-4 mr-2" />
+              )}
+              {isFullScreen ? 'Exit' : 'Full Screen'}
+            </Button>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -180,6 +229,7 @@ export const DataViewer: React.FC<DataViewerProps> = ({
                   setCurrentPage(1);
                 }}
                 className="pl-10 w-64"
+                disabled={isQueryMode}
               />
             </div>
           </div>
@@ -187,6 +237,24 @@ export const DataViewer: React.FC<DataViewerProps> = ({
       </CardHeader>
 
       <CardContent className="px-0">
+        {showQueryEditor && (
+          <QueryEditor
+            database={database}
+            onQueryResult={handleQueryResult}
+            onQueryColumns={handleQueryColumns}
+            tableInfo={allTables}
+          />
+        )}
+
+        {!isQueryMode && tableInfo && (
+          <CrudOperations
+            database={database}
+            tableName={tableName}
+            columns={tableInfo.columns}
+            onDataChange={handleDataChange}
+          />
+        )}
+
         {/* Table */}
         <div className="border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
@@ -197,15 +265,20 @@ export const DataViewer: React.FC<DataViewerProps> = ({
                     <th
                       key={column}
                       className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-100 transition-colors"
-                      onClick={() => handleSort(column)}
+                      onClick={() => !isQueryMode && handleSort(column)}
                     >
                       <div className="flex items-center gap-2">
                         {getColumnIcon(column)}
                         <span>{column}</span>
-                        {getSortIcon(column)}
+                        {!isQueryMode && getSortIcon(column)}
                       </div>
                     </th>
                   ))}
+                  {!isQueryMode && tableInfo && (
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -222,6 +295,19 @@ export const DataViewer: React.FC<DataViewerProps> = ({
                         {formatCellValue(cell)}
                       </td>
                     ))}
+                    {!isQueryMode && tableInfo && (
+                      <td className="px-4 py-3">
+                        <RowActions
+                          row={row}
+                          onEdit={(row) => {
+                            // This will be handled by the CrudOperations component
+                          }}
+                          onDelete={(row) => {
+                            // This will be handled by the CrudOperations component
+                          }}
+                        />
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
