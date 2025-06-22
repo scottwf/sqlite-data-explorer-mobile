@@ -112,3 +112,45 @@ To connect a domain, navigate to Project > Settings > Domains and click Connect 
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
 
+## Running the Dev Server on Boot (Linux/systemd)
+
+To automatically start the Vite dev server when your server boots, use systemd:
+
+1. **Create a systemd service file:**
+   ```sh
+   sudo nano /etc/systemd/system/sqlite-data-explorer.service
+   ```
+   Paste the following (edit paths and user as needed):
+   ```ini
+   [Unit]
+   Description=SQLite Data Explorer Vite Dev Server
+   After=network.target
+
+   [Service]
+   Type=simple
+   User=scott
+   WorkingDirectory=/home/scott/sqlite-data-explorer-mobile
+   ExecStart=/usr/bin/npm run dev
+   Restart=always
+   Environment=PATH=/usr/bin:/usr/local/bin
+   Environment=NODE_ENV=development
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+2. **Reload systemd and enable the service:**
+   ```sh
+   sudo systemctl daemon-reload
+   sudo systemctl enable sqlite-data-explorer
+   sudo systemctl start sqlite-data-explorer
+   ```
+
+3. **Check status and logs:**
+   ```sh
+   sudo systemctl status sqlite-data-explorer
+   journalctl -u sqlite-data-explorer -f
+   ```
+
+This will keep your dev server running in the background and restart it if it crashes. For production, consider building and serving static files with a production server.
+
