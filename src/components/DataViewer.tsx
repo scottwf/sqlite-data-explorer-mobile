@@ -1,8 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { 
   Search, 
   ChevronLeft, 
@@ -56,11 +67,15 @@ export const DataViewer: React.FC<DataViewerProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-  const [pageSize] = useState(50);
+  const [pageSize] = useState(50); // Consider making this configurable
   const [totalRows, setTotalRows] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showQueryEditor, setShowQueryEditor] = useState(false);
   const [isQueryMode, setIsQueryMode] = useState(false);
+  const [selectedCellContent, setSelectedCellContent] = useState<string | null>(null);
+  const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
+
+  const CELL_TRUNCATE_LENGTH = 100;
 
   useEffect(() => {
     if (!database || !tableName) return;
@@ -172,12 +187,38 @@ export const DataViewer: React.FC<DataViewerProps> = ({
     return <Hash className="h-3 w-3 text-gray-400" />;
   };
 
-  const formatCellValue = (value: any) => {
-    if (value === null) return <span className="text-gray-400 italic">NULL</span>;
-    if (typeof value === 'string' && value.length > 100) {
-      return value.substring(0, 100) + '...';
+  const formatCellValue = (value: any, truncateLength: number = CELL_TRUNCATE_LENGTH): { display: React.ReactNode, isTruncated: boolean, fullValue: string } => {
+    const fullValue = String(value);
+    if (value === null || value === undefined) {
+      return { display: <span className="text-gray-400 italic">NULL</span>, isTruncated: false, fullValue: "NULL" };
     }
-    return String(value);
+    if (typeof value === 'object') { // Handle JSON objects/arrays
+      try {
+        const jsonString = JSON.stringify(value, null, 2);
+        if (jsonString.length > truncateLength) {
+          return { display: jsonString.substring(0, truncateLength) + '...', isTruncated: true, fullValue: jsonString };
+        }
+        return { display: jsonString, isTruncated: false, fullValue: jsonString };
+      } catch {
+        // Fallback for non-serializable objects
+        const strVal = String(value);
+         if (strVal.length > truncateLength) {
+          return { display: strVal.substring(0, truncateLength) + '...', isTruncated: true, fullValue: strVal };
+        }
+        return { display: strVal, isTruncated: false, fullValue: strVal };
+      }
+    }
+
+    const strValue = String(value);
+    if (strValue.length > truncateLength) {
+      return { display: strValue.substring(0, truncateLength) + '...', isTruncated: true, fullValue: strValue };
+    }
+    return { display: strValue, isTruncated: false, fullValue: strValue };
+  };
+
+  const handleCellClick = (fullValue: string) => {
+    setSelectedCellContent(fullValue);
+    setIsCellDialogOpen(true);
   };
 
   const totalPages = Math.ceil(totalRows / pageSize);
@@ -290,9 +331,23 @@ export const DataViewer: React.FC<DataViewerProps> = ({
                     {row.map((cell: any, cellIndex: number) => (
                       <td
                         key={cellIndex}
-                        className="px-4 py-3 text-sm text-gray-900 max-w-xs"
+                        className="px-4 py-3 text-sm text-gray-900 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap"
+                        title={typeof cell === 'string' && cell.length > CELL_TRUNCATE_LENGTH ? String(cell) : undefined}
                       >
-                        {formatCellValue(cell)}
+                        {(() => {
+                          const { display, isTruncated, fullValue } = formatCellValue(cell);
+                          if (isTruncated) {
+                            return (
+                              <span
+                                className="cursor-pointer hover:underline"
+                                onClick={() => handleCellClick(fullValue)}
+                              >
+                                {display}
+                              </span>
+                            );
+                          }
+                          return display;
+                        })()}
                       </td>
                     ))}
                     {!isQueryMode && tableInfo && (
@@ -380,6 +435,29 @@ export const DataViewer: React.FC<DataViewerProps> = ({
           </div>
         )}
       </CardContent>
+
+      <Dialog open={isCellDialogOpen} onOpenChange={setIsCellDialogOpen}>
+        <DialogContent className="sm:max-w-[60vw] max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Full Cell Content</DialogTitle>
+            <DialogDescription>
+              Complete content of the selected cell.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-grow p-1 border rounded-md">
+            <pre className="text-sm whitespace-pre-wrap break-all p-2">
+              {selectedCellContent}
+            </pre>
+          </ScrollArea>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Close
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
