@@ -1,4 +1,44 @@
-# Welcome to your Lovable project
+# SQLite Data Explorer Mobile
+
+A modern, browser-based SQLite database explorer and editor. Effortlessly upload, browse, query, and edit SQLite databases with a beautiful, responsive UI. Features include schema browsing, table editing, AI-assisted query generation, and advanced cell viewing—all running locally in your browser.
+
+---
+## Features
+
+- Upload and explore SQLite databases directly in the browser (no server required)
+- View and browse database schema (tables, columns, types, PK, etc.)
+- View, search, sort, and paginate table data
+- Add, edit, and delete rows with a user-friendly UI
+- Full cell content overlay for truncated/large cell values
+- Automatic pretty-printing for JSON cell content in overlays
+- Scrollable overlay for large cell content (horizontal and vertical)
+- AI Query Generator: generate SQL queries from natural language using Ollama (configurable URL, persistent in localStorage)
+- Execute custom SQL queries and view results
+- Toast notifications for actions and errors
+- Responsive design for desktop and mobile
+- Modern UI with shadcn-ui and Tailwind CSS
+
+## Screenshots
+
+### Fullscreen Table View Mode
+![Fullscreen Table View](./public/screenshots/fullscreen_view_mode.png)
+*View your data in a distraction-free, full-window mode for easier analysis and navigation.*
+
+### Ollama-Assisted Query Editor
+![Ollama-Assisted Query Editor](./public/screenshots/ollama_assisted_query_editor.png)
+*Generate SQL queries from natural language using the integrated AI Query Editor powered by Ollama.*
+
+### Upload to View
+![Upload to View](./public/screenshots/upload_to_view.png)
+*Quickly upload your SQLite database file to start exploring its schema and data instantly.*
+
+### View Formatted Cell Content
+![View Formatted Cell Content](./public/screenshots/view_formatted_cella.png)
+*Easily inspect large or JSON-formatted cell values in a scrollable, pretty-printed overlay.*
+
+---
+
+See [ROADMAP.md](./ROADMAP.md) for planned and potential future features.
 
 ## Project info
 
@@ -71,3 +111,4 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
