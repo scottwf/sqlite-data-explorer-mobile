@@ -3,7 +3,7 @@ import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { initSqlJs } from 'sql.js';
+import initSqlJs from 'sql.js';
 
 interface DatabaseUploadProps {
   onDatabaseLoad: (database: any, info: any) => void;
@@ -17,14 +17,24 @@ export const DatabaseUpload: React.FC<DatabaseUploadProps> = ({ onDatabaseLoad }
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Show loading toast for large files
+    const loadingToast = toast({
+      title: "Loading database...",
+      description: `Processing ${file.name} (${Math.round(file.size / 1024 / 1024)}MB)`,
+    });
+
     try {
+      console.log('Initializing SQL.js...');
       const SQL = await initSqlJs({
         locateFile: (file) => `https://sql.js.org/dist/${file}`
       });
 
+      console.log('Reading file...');
       const arrayBuffer = await file.arrayBuffer();
+      console.log('Creating database instance...');
       const db = new SQL.Database(new Uint8Array(arrayBuffer));
 
+      console.log('Getting database schema...');
       // Get database schema information
       const tables = db.exec(`
         SELECT name FROM sqlite_master 
@@ -41,6 +51,7 @@ export const DatabaseUpload: React.FC<DatabaseUploadProps> = ({ onDatabaseLoad }
         return;
       }
 
+      console.log(`Found ${tables.values.length} tables`);
       const databaseInfo = {
         name: file.name,
         tables: await Promise.all(
@@ -66,6 +77,7 @@ export const DatabaseUpload: React.FC<DatabaseUploadProps> = ({ onDatabaseLoad }
         )
       };
 
+      console.log('Database loaded successfully:', databaseInfo);
       onDatabaseLoad(db, databaseInfo);
     } catch (error) {
       console.error('Error loading database:', error);
@@ -113,6 +125,7 @@ export const DatabaseUpload: React.FC<DatabaseUploadProps> = ({ onDatabaseLoad }
       <div className="text-sm text-gray-500 space-y-1">
         <p>Supported formats: .db, .sqlite, .sqlite3</p>
         <p>All processing happens locally in your browser</p>
+        <p>Large files may take a moment to load</p>
       </div>
     </div>
   );
