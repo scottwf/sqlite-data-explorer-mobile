@@ -144,8 +144,8 @@ const Index = () => {
             isMobile 
               ? activeTab === 'schema' ? 'block' : 'hidden'
               : 'col-span-3'
-          }`}>
-            <Card className="h-fit sticky top-24 shadow-lg border-0 bg-white/80 backdrop-blur">
+          } ${isMobile ? '' : 'sticky top-24'}`} style={!isMobile ? { height: 'calc(100vh - 7rem)', overflowY: 'auto' } : {}}>
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
               <SchemaBrowser
                 tables={databaseInfo?.tables || []}
                 selectedTable={selectedTable}
@@ -160,7 +160,7 @@ const Index = () => {
               ? activeTab === 'data' ? 'block' : 'hidden'
               : 'col-span-9'
           }`}>
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
+            <Card className="shadow-lg border-0 bg-white/80">
               {selectedTable && database && (
                 <DataViewer
                   database={database}
