@@ -81,8 +81,8 @@ export const CellViewer: React.FC<CellViewerProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[90vw] sm:max-h-[90vh] max-w-[95vw] max-h-[95vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
+      <DialogContent className="sm:max-w-[90vw] sm:max-h-[90vh] max-w-[95vw] max-h-[95vh] flex flex-col p-0">
+        <DialogHeader className="flex-shrink-0 p-6 pb-4">
           <DialogTitle className="flex items-center justify-between">
             <span>Cell Content {columnName && `- ${columnName}`}</span>
             <Button
@@ -99,11 +99,13 @@ export const CellViewer: React.FC<CellViewerProps> = ({
             {isJson(content) ? 'JSON content (formatted for readability)' : 'Cell content'}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 min-h-0">
-          <ScrollArea className="h-full border rounded-md">
-            <pre className="text-sm whitespace-pre-wrap break-words p-4 font-mono leading-relaxed">
-              {formattedContent}
-            </pre>
+        <div className="flex-1 min-h-0 px-6 pb-6">
+          <ScrollArea className="h-full max-h-[calc(90vh-140px)] border rounded-md">
+            <div className="p-4 max-h-none">
+              <pre className="text-sm whitespace-pre-wrap break-words font-mono leading-relaxed">
+                {formattedContent}
+              </pre>
+            </div>
           </ScrollArea>
         </div>
       </DialogContent>

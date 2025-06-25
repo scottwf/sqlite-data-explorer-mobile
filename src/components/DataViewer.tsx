@@ -2,12 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Table as TableIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Table as TableIcon, Code, Maximize, Minimize, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { QueryEditor } from './QueryEditor';
 import { CrudOperations } from './CrudOperations';
 import { CellViewer } from './CellViewer';
-import { TableControls } from './TableControls';
 import { DataTable } from './DataTable';
 
 interface Column {
@@ -205,20 +206,38 @@ export const DataViewer: React.FC<DataViewerProps> = ({
             </Badge>
           </CardTitle>
           
-          <TableControls
-            searchTerm={searchTerm}
-            onSearchChange={handleSearchChange}
-            showQueryEditor={showQueryEditor}
-            onToggleQueryEditor={() => setShowQueryEditor(!showQueryEditor)}
-            isFullScreen={isFullScreen}
-            onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
-            totalRows={totalRows}
-            isQueryMode={isQueryMode}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-          />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowQueryEditor(!showQueryEditor)}
+            >
+              <Code className="h-4 w-4 mr-2" />
+              {showQueryEditor ? 'Hide' : 'Show'} Query Editor
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsFullScreen(!isFullScreen)}
+            >
+              {isFullScreen ? (
+                <Minimize className="h-4 w-4 mr-2" />
+              ) : (
+                <Maximize className="h-4 w-4 mr-2" />
+              )}
+              {isFullScreen ? 'Exit' : 'Full Screen'}
+            </Button>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search data..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-10 w-64"
+                disabled={isQueryMode}
+              />
+            </div>
+          </div>
         </div>
       </CardHeader>
 
@@ -253,20 +272,64 @@ export const DataViewer: React.FC<DataViewerProps> = ({
           onCopyColumn={handleCopyColumn}
         />
 
-        <TableControls
-          searchTerm={searchTerm}
-          onSearchChange={handleSearchChange}
-          showQueryEditor={showQueryEditor}
-          onToggleQueryEditor={() => setShowQueryEditor(!showQueryEditor)}
-          isFullScreen={isFullScreen}
-          onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
-          totalRows={totalRows}
-          isQueryMode={isQueryMode}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-        />
+        {/* Only show pagination at the bottom */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6">
+            <div className="text-sm text-gray-700">
+              Showing {(currentPage - 1) * pageSize + 1} to{' '}
+              {Math.min(currentPage * pageSize, totalRows)} of {totalRows} results
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className="w-10"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
 
         {data.length === 0 && (
           <div className="text-center py-12 text-gray-500">
