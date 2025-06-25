@@ -1,35 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button, buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { 
-  Search, 
-  ChevronLeft, 
-  ChevronRight, 
-  ArrowUpDown, 
-  ArrowUp, 
-  ArrowDown,
-  Table as TableIcon,
-  Key,
-  Hash,
-  Maximize,
-  Minimize,
-  Code
-} from 'lucide-react';
+import { Table as TableIcon } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 import { QueryEditor } from './QueryEditor';
-import { CrudOperations, RowActions } from './CrudOperations';
+import { CrudOperations } from './CrudOperations';
+import { CellViewer } from './CellViewer';
+import { TableControls } from './TableControls';
+import { DataTable } from './DataTable';
 
 interface Column {
   name: string;
@@ -67,15 +46,16 @@ export const DataViewer: React.FC<DataViewerProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-  const [pageSize] = useState(50); // Consider making this configurable
+  const [pageSize] = useState(50);
   const [totalRows, setTotalRows] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showQueryEditor, setShowQueryEditor] = useState(false);
   const [isQueryMode, setIsQueryMode] = useState(false);
   const [selectedCellContent, setSelectedCellContent] = useState<string | null>(null);
+  const [selectedColumnName, setSelectedColumnName] = useState<string>('');
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
-
-  const CELL_TRUNCATE_LENGTH = 100;
+  
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!database || !tableName) return;
@@ -170,55 +150,41 @@ export const DataViewer: React.FC<DataViewerProps> = ({
     setCurrentPage(1);
   };
 
-  const getSortIcon = (column: string) => {
-    if (sortConfig?.column !== column) {
-      return <ArrowUpDown className="h-4 w-4 text-gray-400" />;
-    }
-    return sortConfig.direction === 'asc' 
-      ? <ArrowUp className="h-4 w-4 text-blue-600" />
-      : <ArrowDown className="h-4 w-4 text-blue-600" />;
-  };
-
-  const getColumnIcon = (columnName: string) => {
-    const column = tableInfo?.columns.find(col => col.name === columnName);
-    if (column?.pk) {
-      return <Key className="h-3 w-3 text-amber-500" />;
-    }
-    return <Hash className="h-3 w-3 text-gray-400" />;
-  };
-
-  const formatCellValue = (value: any, truncateLength: number = CELL_TRUNCATE_LENGTH): { display: React.ReactNode, isTruncated: boolean, fullValue: string } => {
-    const fullValue = String(value);
-    if (value === null || value === undefined) {
-      return { display: <span className="text-gray-400 italic">NULL</span>, isTruncated: false, fullValue: "NULL" };
-    }
-    if (typeof value === 'object') { // Handle JSON objects/arrays
-      try {
-        const jsonString = JSON.stringify(value, null, 2);
-        if (jsonString.length > truncateLength) {
-          return { display: jsonString.substring(0, truncateLength) + '...', isTruncated: true, fullValue: jsonString };
-        }
-        return { display: jsonString, isTruncated: false, fullValue: jsonString };
-      } catch {
-        // Fallback for non-serializable objects
-        const strVal = String(value);
-         if (strVal.length > truncateLength) {
-          return { display: strVal.substring(0, truncateLength) + '...', isTruncated: true, fullValue: strVal };
-        }
-        return { display: strVal, isTruncated: false, fullValue: strVal };
-      }
-    }
-
-    const strValue = String(value);
-    if (strValue.length > truncateLength) {
-      return { display: strValue.substring(0, truncateLength) + '...', isTruncated: true, fullValue: strValue };
-    }
-    return { display: strValue, isTruncated: false, fullValue: strValue };
-  };
-
-  const handleCellClick = (fullValue: string) => {
+  const handleCellClick = (fullValue: string, columnName: string) => {
     setSelectedCellContent(fullValue);
+    setSelectedColumnName(columnName);
     setIsCellDialogOpen(true);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const copyToClipboard = async (text: string, description: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Copied!",
+        description: `${description} copied to clipboard`,
+      });
+    } catch (error) {
+      toast({
+        title: "Copy failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCopyRow = (row: any[]) => {
+    const rowText = row.join('\t');
+    copyToClipboard(rowText, 'Row data');
+  };
+
+  const handleCopyColumn = (columnIndex: number) => {
+    const columnData = data.map(row => row[columnIndex]).join('\n');
+    copyToClipboard(columnData, `Column "${columns[columnIndex]}"`);
   };
 
   const totalPages = Math.ceil(totalRows / pageSize);
@@ -239,41 +205,20 @@ export const DataViewer: React.FC<DataViewerProps> = ({
             </Badge>
           </CardTitle>
           
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowQueryEditor(!showQueryEditor)}
-            >
-              <Code className="h-4 w-4 mr-2" />
-              {showQueryEditor ? 'Hide' : 'Show'} Query Editor
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsFullScreen(!isFullScreen)}
-            >
-              {isFullScreen ? (
-                <Minimize className="h-4 w-4 mr-2" />
-              ) : (
-                <Maximize className="h-4 w-4 mr-2" />
-              )}
-              {isFullScreen ? 'Exit' : 'Full Screen'}
-            </Button>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search data..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="pl-10 w-64"
-                disabled={isQueryMode}
-              />
-            </div>
-          </div>
+          <TableControls
+            searchTerm={searchTerm}
+            onSearchChange={handleSearchChange}
+            showQueryEditor={showQueryEditor}
+            onToggleQueryEditor={() => setShowQueryEditor(!showQueryEditor)}
+            isFullScreen={isFullScreen}
+            onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
+            totalRows={totalRows}
+            isQueryMode={isQueryMode}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </CardHeader>
 
@@ -296,138 +241,32 @@ export const DataViewer: React.FC<DataViewerProps> = ({
           />
         )}
 
-        {/* Table */}
-        <div className="border rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  {columns.map((column) => (
-                    <th
-                      key={column}
-                      className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-100 transition-colors"
-                      onClick={() => !isQueryMode && handleSort(column)}
-                    >
-                      <div className="flex items-center gap-2">
-                        {getColumnIcon(column)}
-                        <span>{column}</span>
-                        {!isQueryMode && getSortIcon(column)}
-                      </div>
-                    </th>
-                  ))}
-                  {!isQueryMode && tableInfo && (
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">
-                      Actions
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {data.map((row, rowIndex) => (
-                  <tr
-                    key={rowIndex}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    {row.map((cell: any, cellIndex: number) => (
-                      <td
-                        key={cellIndex}
-                        className="px-4 py-3 text-sm text-gray-900 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap"
-                        title={typeof cell === 'string' && cell.length > CELL_TRUNCATE_LENGTH ? String(cell) : undefined}
-                      >
-                        {(() => {
-                          const { display, isTruncated, fullValue } = formatCellValue(cell);
-                          if (isTruncated) {
-                            return (
-                              <span
-                                className="cursor-pointer hover:underline"
-                                onClick={() => handleCellClick(fullValue)}
-                              >
-                                {display}
-                              </span>
-                            );
-                          }
-                          return display;
-                        })()}
-                      </td>
-                    ))}
-                    {!isQueryMode && tableInfo && (
-                      <td className="px-4 py-3">
-                        <RowActions
-                          row={row}
-                          onEdit={(row) => {
-                            // This will be handled by the CrudOperations component
-                          }}
-                          onDelete={(row) => {
-                            // This will be handled by the CrudOperations component
-                          }}
-                        />
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <DataTable
+          data={data}
+          columns={columns}
+          tableInfo={tableInfo}
+          isQueryMode={isQueryMode}
+          sortConfig={sortConfig}
+          onSort={handleSort}
+          onCellClick={handleCellClick}
+          onCopyRow={handleCopyRow}
+          onCopyColumn={handleCopyColumn}
+        />
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6">
-            <div className="text-sm text-gray-700">
-              Showing {(currentPage - 1) * pageSize + 1} to{' '}
-              {Math.min(currentPage * pageSize, totalRows)} of {totalRows} results
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(pageNum)}
-                      className="w-10"
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
-              </div>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+        <TableControls
+          searchTerm={searchTerm}
+          onSearchChange={handleSearchChange}
+          showQueryEditor={showQueryEditor}
+          onToggleQueryEditor={() => setShowQueryEditor(!showQueryEditor)}
+          isFullScreen={isFullScreen}
+          onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
+          totalRows={totalRows}
+          isQueryMode={isQueryMode}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
 
         {data.length === 0 && (
           <div className="text-center py-12 text-gray-500">
@@ -436,28 +275,12 @@ export const DataViewer: React.FC<DataViewerProps> = ({
         )}
       </CardContent>
 
-      <Dialog open={isCellDialogOpen} onOpenChange={setIsCellDialogOpen}>
-        <DialogContent className="sm:max-w-[60vw] max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Full Cell Content</DialogTitle>
-            <DialogDescription>
-              Complete content of the selected cell.
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="flex-grow p-1 border rounded-md">
-            <pre className="text-sm whitespace-pre-wrap break-all p-2">
-              {selectedCellContent}
-            </pre>
-          </ScrollArea>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                Close
-              </Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CellViewer
+        isOpen={isCellDialogOpen}
+        onClose={() => setIsCellDialogOpen(false)}
+        content={selectedCellContent || ''}
+        columnName={selectedColumnName}
+      />
     </div>
   );
 };
