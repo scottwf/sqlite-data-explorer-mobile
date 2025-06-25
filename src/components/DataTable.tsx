@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown, Key, Hash, Copy } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Key, Hash, Copy, Lock, Unlock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from "@/hooks/use-toast";
 import { RowActions } from './CrudOperations';
@@ -47,7 +47,20 @@ export const DataTable: React.FC<DataTableProps> = ({
   onCopyColumn
 }) => {
   const { toast } = useToast();
+  const [lockedColumns, setLockedColumns] = useState<Set<number>>(new Set());
   const CELL_TRUNCATE_LENGTH = 100;
+
+  const toggleColumnLock = (columnIndex: number) => {
+    setLockedColumns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(columnIndex)) {
+        newSet.delete(columnIndex);
+      } else {
+        newSet.add(columnIndex);
+      }
+      return newSet;
+    });
+  };
 
   const getSortIcon = (column: string) => {
     if (sortConfig?.column !== column) {
@@ -112,38 +125,54 @@ export const DataTable: React.FC<DataTableProps> = ({
 
   return (
     <div className="border rounded-lg overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+      <div className="overflow-auto max-h-[70vh]">
+        <table className="w-full relative">
+          <thead className="bg-gray-50 border-b sticky top-0 z-10">
             <tr>
               {columns.map((column, index) => (
                 <th
                   key={column}
-                  className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-100 transition-colors group"
+                  className={`px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-100 transition-colors group ${
+                    lockedColumns.has(index) ? 'sticky bg-gray-100 z-20 shadow-lg' : ''
+                  }`}
+                  style={lockedColumns.has(index) ? { left: `${Array.from(lockedColumns).filter(i => i < index).length * 200}px` } : {}}
                   onClick={() => !isQueryMode && onSort(column)}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between min-w-[150px]">
                     <div className="flex items-center gap-2">
                       {getColumnIcon(column)}
-                      <span>{column}</span>
+                      <span className="truncate">{column}</span>
                       {!isQueryMode && getSortIcon(column)}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onCopyColumn(index);
-                      }}
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleColumnLock(index);
+                        }}
+                        title={lockedColumns.has(index) ? 'Unlock column' : 'Lock column'}
+                      >
+                        {lockedColumns.has(index) ? <Lock className="h-3 w-3 text-blue-600" /> : <Unlock className="h-3 w-3" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCopyColumn(index);
+                        }}
+                        title="Copy column"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 </th>
               ))}
               {!isQueryMode && tableInfo && (
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-900 sticky top-0 bg-gray-50">
                   Actions
                 </th>
               )}
@@ -158,7 +187,10 @@ export const DataTable: React.FC<DataTableProps> = ({
                 {row.map((cell: any, cellIndex: number) => (
                   <td
                     key={cellIndex}
-                    className="px-4 py-3 text-sm text-gray-900 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap relative"
+                    className={`px-4 py-3 text-sm text-gray-900 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap relative ${
+                      lockedColumns.has(cellIndex) ? 'sticky bg-white z-10 shadow-lg' : ''
+                    }`}
+                    style={lockedColumns.has(cellIndex) ? { left: `${Array.from(lockedColumns).filter(i => i < cellIndex).length * 200}px` } : {}}
                     title={typeof cell === 'string' && cell.length > CELL_TRUNCATE_LENGTH ? String(cell) : undefined}
                   >
                     {(() => {
@@ -185,7 +217,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                   </td>
                 ))}
                 {!isQueryMode && tableInfo && (
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 sticky right-0 bg-white">
                     <div className="flex items-center gap-2">
                       <RowActions
                         row={row}
@@ -201,6 +233,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                         size="sm"
                         className="opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => onCopyRow(row)}
+                        title="Copy row"
                       >
                         <Copy className="h-3 w-3" />
                       </Button>
