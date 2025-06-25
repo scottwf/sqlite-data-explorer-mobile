@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -156,7 +155,7 @@ Return ONLY the SQL query, no explanations or markdown formatting.`;
         description = "Query generation timed out. The Ollama server might be too busy or the request too complex.";
       } else if (error.message.includes("Ollama server error")) {
         description = error.message;
-      } else if (ollamaStatus === 'error') {
+      } else if (ollamaStatus !== 'success') {
         description = "Failed to generate query. Ollama is not connected. Please check the URL and server status.";
       } else {
         description = `Error: ${error.message || "Please check Ollama server logs."}`;
