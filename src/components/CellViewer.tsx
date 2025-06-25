@@ -1,4 +1,20 @@
 
+/**
+ * CellViewer Component
+ * 
+ * Purpose: Modal dialog for viewing full cell content when data is truncated
+ * in the table view. Provides formatting for JSON content and copy functionality.
+ * 
+ * Features:
+ * - Full-screen modal for large content viewing
+ * - JSON formatting and syntax highlighting
+ * - Copy to clipboard functionality
+ * - Responsive design for mobile and desktop
+ * - Scrollable content area for long data
+ * 
+ * Routes: Triggered from DataTable cell clicks
+ */
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
