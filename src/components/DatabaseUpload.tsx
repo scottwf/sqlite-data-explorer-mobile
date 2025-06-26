@@ -3,10 +3,29 @@ import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import initSqlJs from 'sql.js';
+import initSqlJs, { type Database as SqlJsDatabase } from 'sql.js'; // Import SqlJsDatabase type
+
+// Define a local DatabaseInfo type, mirroring the structure used in Index.tsx and this component
+interface ColumnInfo {
+  name: string;
+  type: string;
+  notnull: boolean;
+  pk: boolean;
+}
+
+interface TableInfo {
+  name: string;
+  columns: ColumnInfo[];
+  rowCount: number;
+}
+
+interface DatabaseInfo {
+  name: string;
+  tables: TableInfo[];
+}
 
 interface DatabaseUploadProps {
-  onDatabaseLoad: (database: any, info: any) => void;
+  onDatabaseLoad: (database: SqlJsDatabase, info: DatabaseInfo) => void; // Use specific types
 }
 
 export const DatabaseUpload: React.FC<DatabaseUploadProps> = ({ onDatabaseLoad }) => {
