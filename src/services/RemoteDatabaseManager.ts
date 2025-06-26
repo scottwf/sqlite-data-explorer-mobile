@@ -68,42 +68,47 @@ class RemoteDatabaseManager {
       return false;
     }
 
-    const PING_ENDPOINT = '/ping'; // Standardized ping endpoint
     let testUrl = this.connectionConfig.url;
 
-    // Ensure the URL doesn't end with a slash, then append the ping endpoint.
+    // Ensure the URL doesn't end with a slash for consistency,
+    // as we are now testing the root path.
     if (testUrl.endsWith('/')) {
       testUrl = testUrl.slice(0, -1);
     }
 
+    // Test the root path '/'
+    const endpointToTest = '/';
+    const fullTestUrl = `${testUrl}${endpointToTest}`;
+
     try {
-      console.log(`Attempting to connect to: ${testUrl}${PING_ENDPOINT}`);
-      const response = await fetch(`${testUrl}${PING_ENDPOINT}`, {
+      console.log(`Attempting to connect to: ${fullTestUrl}`);
+      const response = await fetch(fullTestUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           // Add any other headers if required, e.g., API keys, auth tokens
         },
-        // It's good practice to set a timeout for fetch requests.
-        // AbortController can be used for this.
         signal: AbortSignal.timeout(5000), // 5-second timeout
       });
 
       if (response.ok) { // Status code 200-299
-        console.log(`Connection test to ${testUrl}${PING_ENDPOINT} successful.`);
-        // Optionally, you could check the response body if the ping endpoint returns specific data.
-        // const data = await response.json();
-        // if (data.status === 'ok') return true;
+        console.log(`Connection test to ${fullTestUrl} successful. Status: ${response.status}`);
         return true;
       } else {
-        console.error(`Connection test to ${testUrl}${PING_ENDPOINT} failed with status: ${response.status} ${response.statusText}`);
+        let responseBody = '';
+        try {
+          responseBody = await response.text();
+        } catch (textError) {
+          console.warn(`Could not read response body from ${fullTestUrl}:`, textError);
+        }
+        console.error(`Connection test to ${fullTestUrl} failed with status: ${response.status} ${response.statusText}. Body: ${responseBody}`);
         return false;
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.error(`Connection test to ${testUrl}${PING_ENDPOINT} timed out.`, error);
+        console.error(`Connection test to ${fullTestUrl} timed out.`, error);
       } else {
-        console.error(`Connection test to ${testUrl}${PING_ENDPOINT} failed:`, error);
+        console.error(`Connection test to ${fullTestUrl} failed:`, error);
       }
       return false;
     }
