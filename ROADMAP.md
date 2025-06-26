@@ -15,7 +15,42 @@
 - Responsive/mobile-friendly UI
 - Modern design with shadcn-ui and Tailwind CSS
 
-## Ideas & Potential Enhancements
+## Phase 1: Remote Database Connection Infrastructure (In Progress)
+- [x] Create RemoteDatabaseManager component to handle Flask server connections
+- [x] Add connection configuration UI with URL input and validation
+- [x] Implement connection testing for Flask endpoints (Actual fetch to /ping implemented)
+- [x] Create database connection switcher (Local vs Remote)
+- [x] Add persistent storage for connection configurations (localStorage for URL)
+
+## Phase 2: Remote Database Loading & API Integration
+- [ ] Create HTTP client for fetching SQLite files from Flask servers
+- [ ] Implement database download with progress indicators
+- [ ] Add caching mechanism for remote databases
+- [ ] Handle CORS and authentication if needed
+- [ ] Modify existing DatabaseUpload component to support remote sources
+
+## Phase 3: Enhanced Database Operations
+- [ ] Update CRUD operations to work with remote databases
+- [ ] Implement proper error handling for network operations
+- [ ] Add conflict detection for concurrent modifications
+- [ ] Create database synchronization capabilities
+- [ ] Enable real-time CRUD operations on remote databases
+
+## Phase 4: UI/UX Improvements
+- [x] Add connection status indicators throughout the interface (Basic status bar added)
+- [ ] Create database connection management panel (Partially done with Settings modal)
+- [ ] Implement automatic discovery of Flask servers (if following patterns)
+- [ ] Add loading states and better error messages
+- [ ] Enable quick switching between multiple remote databases
+
+## Phase 5: Advanced Features & Polish
+- [ ] Add database change detection and refresh capabilities
+- [ ] Implement offline mode with cached databases
+- [ ] Add connection health monitoring
+- [ ] Create export/import of connection configurations
+- [ ] Add comprehensive error recovery mechanisms
+
+## General Ideas & Potential Enhancements (Existing)
 
 - Export table/query results to CSV/JSON
 - Import/merge data from CSV/JSON
